@@ -3,10 +3,8 @@
 (require ffi/unsafe
          ffi/unsafe/define)
 
-(define gst-lib
+(define-ffi-definer define-gst
   (ffi-lib "libgstreamer-1.0"))
-
-(define-ffi-definer define-gst gst-lib)
 
 (define _gboolean _bool)
 (define _GstClockTime _uint64)
@@ -91,4 +89,49 @@
   (gst_object_unref (cast bus _GstBus _GstObject))
   (gst_element_set_state pipeline 'GST_STATE_NULL)
   (gst_object_unref (cast pipeline _GstElement _GstObject)))
+
+(define-gst gst_element_factory_make
+  (_fun _string/utf-8
+        _string/utf-8
+        ->
+        _GstElement))
+
+(define gobject-lib
+  (ffi-lib "libgobject-2.0"))
+
+(define-cpointer-type _GObject)
+
+;; g_object_set accepts varargs and can set multiple keys at once, but for
+;; FFI reasons that is kinda sucky.  Just doing one covers most uses.
+;; Additionally it's easier (at this point) to make the specify the correct
+;; types, than to try and guess and be wrong.
+(define g_object_set-cache (make-hash))
+(define (g_object_set gobject name type val)
+  (define func
+    (hash-ref g_object_set-cache type
+              (lambda ()
+                (define ftype
+                  (_cprocedure (list _GObject _string/utf-8 type _pointer) _void))
+                (get-ffi-obj 'g_object_set gobject-lib ftype))))
+  (func gobject name val #f))
+
+(module* non-interactive-player-test #f
+  (gst_init_check)
+  (define playbin
+    (gst_element_factory_make "playbin" "playbin"))
+  (g_object_set
+    (cast playbin _GstElement _GObject)
+    "uri"
+    _string/utf-8
+    "https://www.freedesktop.org/software/gstreamer-sdk/data/media/sintel_trailer-480p.webm")
+  (gst_element_set_state playbin 'GST_STATE_PLAYING)
+  (define bus (gst_element_get_bus playbin))
+  (define msg
+    (gst_bus_timed_pop_filtered
+      bus GST_CLOCK_TIME_NONE '(GST_MESSAGE_ERROR GST_MESSAGE_EOS)))
+  (when msg
+    (gst_message_unref msg))
+  (gst_object_unref (cast bus _GstBus _GstObject))
+  (gst_element_set_state playbin 'GST_STATE_NULL)
+  (gst_object_unref (cast playbin _GstElement _GstObject)))
 
