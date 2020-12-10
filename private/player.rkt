@@ -1,23 +1,36 @@
 #lang racket/base
 
 (require racket/match
+         racket/place
          net/url
          ffi/unsafe
+         ffi/unsafe/port
          "gstreamer.rkt")
 
 (provide make-player
+         player-message-evt
          player-state
          set-player-state!
          set-player-track!)
 
-(struct player
-  [gst-element
-    ])
+(struct player [gst-element])
 
 (define (make-player)
   (unless gst_init?
     (gst_init_check))
-  (player (gst_element_factory_make "playbin" #f)))
+  (define playbin (gst_element_factory_make "playbin" #f))
+  (player playbin))
+
+(define (player-message-evt ply)
+  (guard-evt
+    (lambda ()
+      (define bus
+        (gst_element_get_bus
+          (player-gst-element ply)))
+      (handle-evt
+        (unsafe-fd->evt (gst_bus_get_pollfd bus) 'read)
+        (lambda (e)
+          (gst_bus_pop bus))))))
 
 (define (player-state ply)
   (define-values (status state pending-state)

@@ -8,7 +8,10 @@
          g_object_set
          gst_init?
          gst_init_check
+         gst_bus_get_pollfd
+         gst_bus_pop
          gst_element_factory_make
+         gst_element_get_bus
          gst_element_get_state
          gst_element_set_state)
 
@@ -16,6 +19,8 @@
   (ffi-lib "libgstreamer-1.0"))
 
 (define _gboolean _bool)
+(define _gint     _int)
+(define _gushort  _ushort)
 (define _GstClockTime _uint64)
 
 (define-cpointer-type _GstObject)
@@ -41,6 +46,11 @@
   (_bitmask '[GST_MESSAGE_UNKNOWN = 0
               GST_MESSAGE_EOS     = 1
               GST_MESSAGE_ERROR   = 2]))
+
+(define-cstruct _GPollFD
+  ([fd      _gint]
+   [events  _gushort]
+   [revents _gushort]))
 
 (define GST_CLOCK_TIME_NONE #xFFFFFFFFFFFFFFFF)
 
@@ -86,12 +96,27 @@
 (define-gst gst_element_get_bus
   (_fun _GstElement -> _GstBus/null))
 
+(define-gst gst_bus_pop
+  (_fun _GstBus
+        ->
+        _GstMessage/null))
+
 (define-gst gst_bus_timed_pop_filtered
   (_fun _GstBus
         _GstClockTime
         _GstMessageType
         ->
         _GstMessage/null))
+
+;; The program only needs the file descriptor so we toss out the rest of the
+;; _GPollFD struct
+(define-gst gst_bus_get_pollfd
+  (_fun _GstBus
+        (poll-fd : (_ptr o _GPollFD))
+        ->
+        _void
+        ->
+        (GPollFD-fd poll-fd)))
 
 (define-gst gst_mini_object_unref
   (_fun _GstMiniObject -> _void))

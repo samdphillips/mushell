@@ -49,12 +49,18 @@
     (define/public (set-current-track! filename)
       (set-player-track! player (path->url filename)))
 
+    (define (player-evt-handler)
+      (displayln
+        (sync (player-message-evt player)))
+      (player-evt-handler))
+
     (define/public (run)
       (build-ui!)
       (build-player!)
       (send frame show #t)
       (set-state! 'pause)
-      (set-current-track! track))))
+      (set-current-track! track)
+      (void (thread player-evt-handler)))))
 
 (module* main #f
   (send (new simple-player-ui%) run))
