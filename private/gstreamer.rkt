@@ -3,6 +3,14 @@
 (require ffi/unsafe
          ffi/unsafe/define)
 
+(provide _GObject
+         _GstElement
+         g_object_set
+         gst_init_check
+         gst_element_factory_make
+         gst_element_get_state
+         gst_element_set_state)
+
 (define-ffi-definer define-gst
   (ffi-lib "libgstreamer-1.0"))
 
@@ -51,6 +59,16 @@
 
 (define-gst gst_object_unref
   (_fun _GstObject -> _void))
+
+(define-gst gst_element_get_state
+  (_fun _GstElement
+        [current-state : (_ptr o _GstState)]
+        [pending-state : (_ptr o _GstState)]
+        _GstClockTime
+        ->
+        [return : _GstStateChangeReturn]
+        ->
+        (values return current-state pending-state)))
 
 (define-gst gst_element_set_state
   (_fun _GstElement _GstState
