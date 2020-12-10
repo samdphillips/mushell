@@ -21,6 +21,9 @@
   (define playbin (gst_element_factory_make "playbin" #f))
   (player playbin))
 
+(define (gst-message->player-message msg)
+  (GstMessage-type msg))
+
 (define (player-message-evt ply)
   (guard-evt
     (lambda ()
@@ -30,7 +33,13 @@
       (handle-evt
         (unsafe-fd->evt (gst_bus_get_pollfd bus) 'read)
         (lambda (e)
-          (gst_bus_pop bus))))))
+          (define msg
+            (gst_bus_pop bus))
+          (cond
+            [msg (define new-msg (gst-message->player-message msg))
+                 (gst_message_unref msg)
+                 new-msg]
+            [else #f]))))))
 
 (define (player-state ply)
   (define-values (status state pending-state)

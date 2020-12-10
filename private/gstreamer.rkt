@@ -13,7 +13,9 @@
          gst_element_factory_make
          gst_element_get_bus
          gst_element_get_state
-         gst_element_set_state)
+         gst_element_set_state
+         GstMessage-type
+         gst_message_unref)
 
 (define-ffi-definer define-gst
   (ffi-lib "libgstreamer-1.0"))
@@ -42,10 +44,45 @@
            GST_STATE_CHANGE_ASYNC      = 2
            GST_STATE_CHANGE_NO_PREROLL = 3]))
 
-(define _GstMessageType
+(define _GstMessageType/bitmask
   (_bitmask '[GST_MESSAGE_UNKNOWN = 0
               GST_MESSAGE_EOS     = 1
               GST_MESSAGE_ERROR   = 2]))
+
+(define _GstMessageType/enum
+  (_enum
+    '[GST_MESSAGE_UNKNOWN           = #x00000000
+      GST_MESSAGE_EOS               = #x00000001
+      GST_MESSAGE_ERROR             = #x00000002
+      GST_MESSAGE_WARNING           = #x00000004
+      GST_MESSAGE_INFO              = #x00000008
+      GST_MESSAGE_TAG               = #x00000010
+      GST_MESSAGE_BUFFERING         = #x00000020
+      GST_MESSAGE_STATE_CHANGED     = #x00000040
+      GST_MESSAGE_STATE_DIRTY       = #x00000080
+      GST_MESSAGE_STEP_DONE         = #x00000100
+      GST_MESSAGE_CLOCK_PROVIDE     = #x00000200
+      GST_MESSAGE_CLOCK_LOST        = #x00000400
+      GST_MESSAGE_NEW_CLOCK         = #x00000800
+      GST_MESSAGE_STRUCTURE_CHANGE  = #x00001000
+      GST_MESSAGE_STREAM_STATUS     = #x00002000
+      GST_MESSAGE_APPLICATION       = #x00004000
+      GST_MESSAGE_ELEMENT           = #x00008000
+      GST_MESSAGE_SEGMENT_START     = #x00010000
+      GST_MESSAGE_SEGMENT_DONE      = #x00020000
+      GST_MESSAGE_DURATION_CHANGED  = #x00040000
+      GST_MESSAGE_LATENCY           = #x00080000
+      GST_MESSAGE_ASYNC_START       = #x00100000
+      GST_MESSAGE_ASYNC_DONE        = #x00200000
+      GST_MESSAGE_REQUEST_STATE     = #x00400000
+      GST_MESSAGE_STEP_START        = #x00800000
+      GST_MESSAGE_QOS               = #x01000000
+      GST_MESSAGE_PROGRESS          = #x02000000
+      GST_MESSAGE_TOC               = #x04000000
+      GST_MESSAGE_RESET_TIME        = #x08000000
+      GST_MESSAGE_STREAM_START      = #x10000000
+      GST_MESSAGE_NEED_CONTEXT      = #x20000000
+      GST_MESSAGE_HAVE_CONTEXT      = #x40000000]))
 
 (define-cstruct _GPollFD
   ([fd      _gint]
@@ -104,7 +141,7 @@
 (define-gst gst_bus_timed_pop_filtered
   (_fun _GstBus
         _GstClockTime
-        _GstMessageType
+        _GstMessageType/bitmask
         ->
         _GstMessage/null))
 
@@ -117,6 +154,12 @@
         _void
         ->
         (GPollFD-fd poll-fd)))
+
+;; DANGER: this is very unsafe and may not work on every platform.  I asked the
+;; C compiler for the offset of the field on my system.  I am much too lazy to
+;; transcribe all the parts of this just to get this one field.
+(define (GstMessage-type msg)
+  (ptr-ref (ptr-add msg 64) _GstMessageType/enum))
 
 (define-gst gst_mini_object_unref
   (_fun _GstMiniObject -> _void))
