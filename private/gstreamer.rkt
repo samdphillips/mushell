@@ -6,6 +6,7 @@
 (provide _GObject
          _GstElement
          g_object_set
+         gst_init?
          gst_init_check
          gst_element_factory_make
          gst_element_get_state
@@ -43,12 +44,19 @@
 
 (define GST_CLOCK_TIME_NONE #xFFFFFFFFFFFFFFFF)
 
+(define gst_init? #f)
+
 ;; FIXME: don't pass in nulls
 (define-gst gst_init_check
   (_fun (_pointer = #f)
         (_pointer = #f)
         (_pointer = #f)
-        -> _gboolean))
+        ->
+        (ret : _gboolean)
+        ->
+        (begin
+          (set! gst_init? ret)
+          ret)))
 
 ;; FIXME: don't pass in null for error
 (define-gst gst_parse_launch
