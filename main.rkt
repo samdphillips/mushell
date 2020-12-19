@@ -21,14 +21,21 @@
       (set! frame (new frame% [label "mshell"]))
       (define hpane (new horizontal-pane% [parent frame]))
       (set! prev-button
-        (new button% [label "prev"] [parent hpane]))
+        (new button%
+             [label "prev"]
+             [parent hpane]
+             [stretchable-width #t]))
       (set! play-pause-button
         (new button%
              [parent hpane]
              [label "play"]
+             [stretchable-width #t]
              [callback (lambda (b e) (toggle-play-pause!))]))
       (set! next-button
-        (new button% [label "next"] [parent hpane])))
+        (new button%
+             [label "next"]
+             [parent hpane]
+             [stretchable-width #t])))
 
     (define (build-player!)
       (set! player (make-player)))
