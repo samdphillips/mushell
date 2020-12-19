@@ -15,13 +15,24 @@
          gst_element_get_state
          gst_element_set_state
          GstMessage-type
-         gst_message_unref)
+         GstMessage-timestamp
+         gst_message_unref
+         gst_message_parse_state_changed
+         gst_message_parse_tag
+
+         gst_tag_list_unref
+         gst_tag_list_n_tags
+         gst_tag_list_nth_tag_name
+         gst_tag_list_get_string
+         gst_tag_list_get_tag_size)
 
 (define-ffi-definer define-gst
   (ffi-lib "libgstreamer-1.0"))
 
 (define _gboolean _bool)
 (define _gint     _int)
+(define _guint    _uint)
+(define _guint64  _uint64)
 (define _gushort  _ushort)
 (define _GstClockTime _uint64)
 
@@ -30,6 +41,7 @@
 (define-cpointer-type _GstBus)
 (define-cpointer-type _GstMessage)
 (define-cpointer-type _GstMiniObject)
+(define-cpointer-type _GstTagList)
 
 (define _GstState
   (_enum '[GST_STATE_VOID_PENDING = 0
@@ -156,10 +168,13 @@
         (GPollFD-fd poll-fd)))
 
 ;; DANGER: this is very unsafe and may not work on every platform.  I asked the
-;; C compiler for the offset of the field on my system.  I am much too lazy to
-;; transcribe all the parts of this just to get this one field.
+;; C compiler for the offset of these fields on my system.  I am much too lazy
+;; to transcribe all the parts of this just to get this these fields.
 (define (GstMessage-type msg)
   (ptr-ref (ptr-add msg 64) _GstMessageType/enum))
+
+(define (GstMessage-timestamp msg)
+  (ptr-ref (ptr-add msg 72) _guint64))
 
 (define-gst gst_mini_object_unref
   (_fun _GstMiniObject -> _void))
@@ -167,6 +182,59 @@
 (define (gst_message_unref gst-message)
   (gst_mini_object_unref
     (cast gst-message _GstMessage _GstMiniObject)))
+
+(define-gst gst_message_parse_state_changed
+  (_fun _GstMessage
+        [old : (_ptr o _GstState)]
+        [new : (_ptr o _GstState)]
+        [pending : (_ptr o _GstState)]
+        ->
+        _void
+        ->
+        (values old new pending)))
+
+(define-gst gst_message_parse_tag
+  (_fun _GstMessage
+        [taglist : (_ptr o _GstTagList)]
+        ->
+        _void
+        ->
+        taglist))
+
+(define-gst gst_tag_list_n_tags
+  (_fun _GstTagList -> _gint))
+
+(define-gst gst_tag_list_nth_tag_name
+  (_fun _GstTagList
+        _guint
+        ->
+        _string/utf-8))
+
+;; Copy to a Racket string, but also free the pointer from C.
+(define (ptr->string p)
+  (dynamic-wind
+    void
+    (lambda () (cast p _pointer _string/utf-8))
+    (lambda () (g_free p))))
+
+(define-gst gst_tag_list_get_string
+  (_fun _GstTagList
+        _string/latin-1
+        [val : (_ptr o _pointer)]
+        ->
+        [res : _gboolean]
+        ->
+        (and res (ptr->string val))))
+
+(define-gst gst_tag_list_get_tag_size
+  (_fun _GstTagList
+        _string/utf-8
+        ->
+        _guint))
+
+(define (gst_tag_list_unref gst-tag-list)
+  (gst_mini_object_unref
+    (cast gst-tag-list _GstTagList _GstMiniObject)))
 
 (module* tutorial-1 #f
   (gst_init_check)
@@ -189,6 +257,12 @@
         _string/utf-8
         ->
         _GstElement))
+
+(define-ffi-definer define-glib
+  (ffi-lib "libglib-2.0"))
+
+(define-glib g_free
+  (_fun _pointer -> _void))
 
 (define gobject-lib
   (ffi-lib "libgobject-2.0"))

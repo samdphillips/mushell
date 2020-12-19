@@ -49,9 +49,31 @@
     (define/public (set-current-track! filename)
       (set-player-track! player (path->url filename)))
 
+    (define (set-play-pause-label! s)
+      (send play-pause-button set-label s))
+
+    (define/public (on-player-state-change e)
+      (match e
+        [(player-state-changed-msg _ 'GST_STATE_PAUSED 'GST_STATE_PLAYING _)
+         (set-play-pause-label! "pause")]
+        [(player-state-changed-msg _ 'GST_STATE_PLAYING 'GST_STATE_PAUSED _)
+         (set-play-pause-label! "play")]
+        [_ (void)]))
+
+    (define/public (on-player-tags e)
+      (void))
+
+    (define/public (on-player-event e)
+      (match e
+        [(? player-state-changed-msg?) (on-player-state-change e)]
+        [(? player-tags-msg?)          (on-player-tags e)]
+        [_ (void)]))
+
     (define (player-evt-handler)
-      (displayln
-        (sync (player-message-evt player)))
+      (define e (sync (player-message-evt player)))
+      (queue-callback
+        (lambda ()
+          (send this on-player-event e)))
       (player-evt-handler))
 
     (define/public (run)

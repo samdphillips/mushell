@@ -11,7 +11,11 @@
          player-message-evt
          player-state
          set-player-state!
-         set-player-track!)
+         set-player-track!
+
+         player-msg-timestamp
+         (struct-out player-state-changed-msg)
+         (struct-out player-tags-msg))
 
 (struct player [gst-element])
 
@@ -21,8 +25,33 @@
   (define playbin (gst_element_factory_make "playbin" #f))
   (player playbin))
 
+(struct player-msg (timestamp) #:transparent)
+(struct player-state-changed-msg player-msg (old new pending) #:transparent)
+(struct player-tags-msg player-msg (taglist) #:transparent)
+
 (define (gst-message->player-message msg)
-  (GstMessage-type msg))
+  (match (GstMessage-type msg)
+    ['GST_MESSAGE_STATE_CHANGED
+     ;; XXX: should these state values be converted from GST values?
+     (define-values (old new pending) (gst_message_parse_state_changed msg))
+     (player-state-changed-msg (GstMessage-timestamp msg) old new pending)]
+    ['GST_MESSAGE_TAG
+     (player-tags-msg (GstMessage-timestamp msg) (convert-gst-tags-message msg))]
+    [x x]))
+
+;; For now we'll just deal with this set of string valued tags
+(define player-tags
+  '("album" "artist" "genre" "title"))
+
+(define (convert-gst-tags-message msg)
+  (define taglist (gst_message_parse_tag msg))
+  (dynamic-wind
+    void
+    (lambda ()
+      (for/hash ([tag (in-list player-tags)])
+        (values tag (gst_tag_list_get_string taglist tag))))
+    (lambda ()
+      (gst_tag_list_unref taglist))))
 
 (define (player-message-evt ply)
   (guard-evt
