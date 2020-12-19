@@ -15,11 +15,16 @@
            [prev-button #f]
            [play-pause-button #f]
            [next-button #f]
+           [track-label #f]
            [player #f])
 
     (define (build-ui!)
-      (set! frame (new frame% [label "mshell"]))
-      (define hpane (new horizontal-pane% [parent frame]))
+      (set! frame
+        (new frame%
+             [label "mshell"]
+             [min-width 400]))
+      (define vpane (new vertical-pane% [parent frame]))
+      (define hpane (new horizontal-pane% [parent vpane]))
       (set! prev-button
         (new button%
              [label "prev"]
@@ -35,7 +40,13 @@
         (new button%
              [label "next"]
              [parent hpane]
-             [stretchable-width #t])))
+             [stretchable-width #t]))
+      (set! track-label
+        (new message%
+             [label ""]
+             [auto-resize #t]
+             [stretchable-width #t]
+             [parent vpane])))
 
     (define (build-player!)
       (set! player (make-player)))
@@ -59,6 +70,9 @@
     (define (set-play-pause-label! s)
       (send play-pause-button set-label s))
 
+    (define (set-track-label! s)
+      (send track-label set-label s))
+
     (define/public (on-player-state-change e)
       (match e
         [(player-state-changed-msg _ 'GST_STATE_PAUSED 'GST_STATE_PLAYING _)
@@ -68,7 +82,7 @@
         [_ (void)]))
 
     (define/public (on-player-tags e)
-      (void))
+      (set-track-label! (~a (player-tags-msg-tags e))))
 
     (define/public (on-player-event e)
       (match e

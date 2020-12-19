@@ -27,7 +27,7 @@
 
 (struct player-msg (timestamp) #:transparent)
 (struct player-state-changed-msg player-msg (old new pending) #:transparent)
-(struct player-tags-msg player-msg (taglist) #:transparent)
+(struct player-tags-msg player-msg (tags) #:transparent)
 
 (define (gst-message->player-message msg)
   (match (GstMessage-type msg)
