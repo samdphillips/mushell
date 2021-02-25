@@ -5,25 +5,31 @@
          net/url
          ffi/unsafe
          ffi/unsafe/port
+         "announcements.rkt"
          "gstreamer.rkt")
 
 (provide make-player
+         player-subscribe!
+         #;
          player-message-evt
          player-state
          set-player-state!
          set-player-track!
 
+         player-msg?
          player-msg-timestamp
          (struct-out player-state-changed-msg)
          (struct-out player-tags-msg))
 
-(struct player [gst-element])
+(struct player [gst-element announcer bus-thread])
 
 (define (make-player)
   (unless gst_init?
     (gst_init_check))
   (define playbin (gst_element_factory_make "playbin" #f))
-  (player playbin))
+  (define bus-thread (thread (lambda () (run-bus-thread ply))))
+  (define ply (player playbin (make-announcer) bus-thread))
+  ply)
 
 (struct player-msg (timestamp) #:transparent)
 (struct player-state-changed-msg player-msg (old new pending) #:transparent)
@@ -69,6 +75,17 @@
                  (gst_message_unref msg)
                  new-msg]
             [else #f]))))))
+
+(define (run-bus-thread ply)
+  (sync
+    (handle-evt (player-message-evt ply)
+      (lambda (msg)
+        (announcer-announce (player-announcer ply) msg)
+        (run-bus-thread ply)))))
+
+(define (player-subscribe! ply selector action)
+  (define sub (subscription 50 #f selector action))
+  (announcer-add-subscription! (player-announcer ply) sub))
 
 (define (player-state ply)
   (define-values (status state pending-state)

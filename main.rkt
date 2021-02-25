@@ -6,7 +6,7 @@
          "private/player.rkt")
 
 (define track
-  "/media/sam/reorganized/CAKE/Motorcade of Generosity/01 Comanche.mp3")
+  "/mnt/music-rw/reorganized/XTC/Apple Venus, Volume 1/01 River of Orchids.m4a")
 
 (define simple-player-ui%
   (class object%
@@ -49,7 +49,16 @@
              [parent vpane])))
 
     (define (build-player!)
-      (set! player (make-player)))
+      (set! player (make-player))
+      (player-subscribe! player player-state-changed-msg?
+                         (lambda (msg)
+                           (queue-callback
+                             (lambda ()
+                               (send this on-player-state-change msg)))))
+      (player-subscribe! player player-tags-msg?
+                         (lambda (msg)
+                           (queue-callback
+                             (lambda () (send this on-player-tags msg))))))
 
     (define (toggle-play-pause!)
       (define new-state
@@ -84,12 +93,15 @@
     (define/public (on-player-tags e)
       (set-track-label! (~a (player-tags-msg-tags e))))
 
+
+    #;
     (define/public (on-player-event e)
       (match e
         [(? player-state-changed-msg?) (on-player-state-change e)]
         [(? player-tags-msg?)          (on-player-tags e)]
         [_ (void)]))
 
+    #;
     (define (player-evt-handler)
       (define e (sync (player-message-evt player)))
       (queue-callback
@@ -103,6 +115,7 @@
       (send frame show #t)
       (set-state! 'pause)
       (set-current-track! track)
+      #;
       (void (thread player-evt-handler)))))
 
 (module* main #f
