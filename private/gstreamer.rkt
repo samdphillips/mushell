@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require ffi/unsafe
+(require racket/match
+         setup/dirs
+         ffi/unsafe
          ffi/unsafe/define)
 
 (provide _GObject
@@ -26,8 +28,18 @@
          gst_tag_list_get_string
          gst_tag_list_get_tag_size)
 
+;; workaround for MacOS with homebrew installed gstreamer
+(define (get-lib-dirs)
+  (append (match (system-type 'os)
+            ['macosx
+             '("/usr/local/Cellar/gstreamer/1.18.3/lib"
+               "/usr/local/Cellar/glib/2.66.7/lib/")]
+            [_ null])
+          (get-lib-search-dirs)))
+
 (define-ffi-definer define-gst
-  (ffi-lib "libgstreamer-1.0"))
+  (ffi-lib "libgstreamer-1.0"
+           #:get-lib-dirs get-lib-dirs))
 
 (define _gboolean _bool)
 (define _gint     _int)
@@ -259,13 +271,15 @@
         _GstElement))
 
 (define-ffi-definer define-glib
-  (ffi-lib "libglib-2.0"))
+  (ffi-lib "libglib-2.0"
+           #:get-lib-dirs get-lib-dirs))
 
 (define-glib g_free
   (_fun _pointer -> _void))
 
 (define gobject-lib
-  (ffi-lib "libgobject-2.0"))
+  (ffi-lib "libgobject-2.0"
+           #:get-lib-dirs get-lib-dirs))
 
 (define-cpointer-type _GObject)
 
