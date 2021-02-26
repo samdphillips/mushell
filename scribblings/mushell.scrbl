@@ -1,10 +1,10 @@
 #lang scribble/manual
-@require[@for-label[mshell
+@require[@for-label[mushell
                     racket/base]]
 
-@title{mshell}
+@title{mushell}
 @author{sam}
 
-@defmodule[mshell]
+@defmodule[mushell]
 
 Package Description Here
