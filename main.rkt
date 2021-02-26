@@ -5,9 +5,6 @@
          net/url
          "private/player.rkt")
 
-(define track
-  "/mnt/music-rw/reorganized/XTC/Apple Venus, Volume 1/01 River of Orchids.m4a")
-
 (define simple-player-ui%
   (class object%
     (super-new)
@@ -93,31 +90,15 @@
     (define/public (on-player-tags e)
       (set-track-label! (~a (player-tags-msg-tags e))))
 
-
-    #;
-    (define/public (on-player-event e)
-      (match e
-        [(? player-state-changed-msg?) (on-player-state-change e)]
-        [(? player-tags-msg?)          (on-player-tags e)]
-        [_ (void)]))
-
-    #;
-    (define (player-evt-handler)
-      (define e (sync (player-message-evt player)))
-      (queue-callback
-        (lambda ()
-          (send this on-player-event e)))
-      (player-evt-handler))
-
-    (define/public (run)
+    (define/public (run track)
       (build-ui!)
       (build-player!)
       (send frame show #t)
       (set-state! 'pause)
-      (set-current-track! track)
-      #;
-      (void (thread player-evt-handler)))))
+      (set-current-track! track))))
 
 (module* main #f
-  (send (new simple-player-ui%) run))
+  (define track
+    (vector-ref (current-command-line-arguments) 0))
+  (send (new simple-player-ui%) run track))
 
