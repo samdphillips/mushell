@@ -10,8 +10,6 @@
 
 (provide make-player
          player-subscribe!
-         #;
-         player-message-evt
          player-state
          set-player-state!
          set-player-track!
@@ -91,13 +89,17 @@
   (define-values (status state pending-state)
     (gst_element_get_state (player-gst-element ply) 0))
   (match state
+    ['GST_STATE_NULL    'pause]
     ['GST_STATE_READY   'pause]
     ['GST_STATE_PAUSED  'pause]
     ['GST_STATE_PLAYING 'play]))
 
 (define (set-player-state! ply new-state)
   (define new-gst-state
-    (match new-state ['play 'GST_STATE_PLAYING] ['pause 'GST_STATE_PAUSED]))
+    (match new-state
+      ['play 'GST_STATE_PLAYING]
+      ['pause 'GST_STATE_PAUSED]
+      ['null 'GST_STATE_NULL]))
   (gst_element_set_state (player-gst-element ply) new-gst-state))
 
 (define (set-player-track! ply url)

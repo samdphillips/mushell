@@ -3,6 +3,8 @@
 (require racket/class
          racket/stream)
 
+(provide songlist%)
+
 (module+ test
   (require rackunit))
 
@@ -21,11 +23,20 @@
 
     (define/public (get-current) current)
 
+    (define/public (get-next)
+      (cond
+        [(not (null? up-next-queue))
+         (car up-next-queue)]
+        [(not (stream-empty? future-queue))
+         (stream-first future-queue)]
+        [else #f]))
+
     (define (changed!)
       ;; trigger change announcments
       (void))
 
     (define/public (next!)
+      ;; XXX: update history
       (cond
         [(not (null? up-next-queue))
          (set! current (car up-next-queue))
