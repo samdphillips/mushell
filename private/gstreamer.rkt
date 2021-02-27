@@ -290,11 +290,11 @@
 (define g_object_set-cache (make-hash))
 (define (g_object_set gobject name type val)
   (define func
-    (hash-ref g_object_set-cache type
-              (lambda ()
-                (define ftype
-                  (_cprocedure (list _GObject _string/utf-8 type _pointer) _void))
-                (get-ffi-obj 'g_object_set gobject-lib ftype))))
+    (hash-ref! g_object_set-cache type
+               (lambda ()
+                 (define ftype
+                   (_cprocedure (list _GObject _string/utf-8 type _pointer) _void))
+                 (get-ffi-obj 'g_object_set gobject-lib ftype))))
   (func gobject name val #f))
 
 (module* non-interactive-player-test #f
