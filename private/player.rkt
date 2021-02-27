@@ -78,7 +78,8 @@
   (sync
     (handle-evt (player-message-evt ply)
       (lambda (msg)
-        (announcer-announce (player-announcer ply) msg)
+        (when msg
+          (announcer-announce (player-announcer ply) msg))
         (run-bus-thread ply)))))
 
 (define (player-subscribe! ply selector action)
@@ -103,7 +104,6 @@
   (gst_element_set_state (player-gst-element ply) new-gst-state))
 
 (define (set-player-track! ply url)
-  ;; XXX: save current state, pause, restore state
   (g_object_set (cast (player-gst-element ply) _GstElement _GObject)
                 "uri" _string/utf-8 (url->string url)))
 
