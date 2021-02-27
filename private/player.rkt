@@ -16,6 +16,7 @@
 
          player-msg?
          player-msg-timestamp
+         (struct-out player-eos-msg)
          (struct-out player-state-changed-msg)
          (struct-out player-tags-msg))
 
@@ -30,10 +31,12 @@
   ply)
 
 (struct player-msg (timestamp) #:transparent)
+(struct player-eos-msg player-msg () #:transparent)
 (struct player-state-changed-msg player-msg (old new pending) #:transparent)
 (struct player-tags-msg player-msg (tags) #:transparent)
 
 (define (gst-message->player-message msg)
+  (displayln (GstMessage-type msg))
   (match (GstMessage-type msg)
     ['GST_MESSAGE_STATE_CHANGED
      ;; XXX: should these state values be converted from GST values?
@@ -41,6 +44,8 @@
      (player-state-changed-msg (GstMessage-timestamp msg) old new pending)]
     ['GST_MESSAGE_TAG
      (player-tags-msg (GstMessage-timestamp msg) (convert-gst-tags-message msg))]
+    ['GST_MESSAGE_EOS
+     (player-eos-msg (GstMessage-timestamp msg))]
     [x x]))
 
 ;; For now we'll just deal with this set of string valued tags

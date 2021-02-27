@@ -59,7 +59,11 @@
       (player-subscribe! player player-tags-msg?
                          (lambda (msg)
                            (queue-callback
-                             (lambda () (send this on-player-tags msg))))))
+                             (lambda () (send this on-player-tags msg)))))
+      (player-subscribe! player player-eos-msg?
+                         (lambda (msg)
+                           (queue-callback
+                             (lambda () (send this on-next-button))))))
 
     (define (toggle-play-pause!)
       (define new-state
