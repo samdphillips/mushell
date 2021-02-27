@@ -28,7 +28,8 @@
         (new button%
              [label "prev"]
              [parent hpane]
-             [stretchable-width #t]))
+             [stretchable-width #t]
+             [callback (lambda (b e) (on-prev-button))]))
       (set! play-pause-button
         (new button%
              [parent hpane]
@@ -84,7 +85,6 @@
       (send track-label set-label s))
 
     (define/public (on-player-state-change e)
-      (displayln e)
       (match e
         [(player-state-changed-msg _ 'GST_STATE_PAUSED 'GST_STATE_PLAYING _)
          (set-play-pause-label! "pause")]
@@ -98,6 +98,12 @@
                (send songlist get-current)
                (for/list ([(k v) (in-hash (player-tags-msg-tags e))])
                  (~a k ": " v)))))
+
+    (define/public (on-prev-button)
+      ;; XXX: need to actual step back into the history
+      (define prev-state (current-state))
+      (set-state! 'null)
+      (set-state! prev-state))
 
     (define/public (on-next-button)
       (define prev-state (current-state))
@@ -117,15 +123,15 @@
       (set-current-track! (send songlist get-current)))))
 
 (module* main #f
-  (define base-dir (vector-ref (current-command-line-arguments) 0))
   (define (audio-file-name? fn)
     (match (path-get-extension fn)
       [(or #".ogg" #".mp3" #".m4a") #t]
       [_ #f]))
   (define tracks
     (shuffle
-      (for/list ([filename (in-directory base-dir)]
-                 #:when (audio-file-name? filename))
+      (for*/list ([base-dir (in-vector (current-command-line-arguments))]
+                  [filename (in-directory base-dir)]
+                  #:when (audio-file-name? filename))
         filename)))
   (define songlist
     (new songlist% [source tracks]))
