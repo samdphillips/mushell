@@ -25,7 +25,7 @@
     (define (build-ui!)
       (set! frame
         (new frame%
-             [label "mshell"]
+             [label "mushell"]
              [min-width 600]))
       (define vpane (new vertical-pane% [parent frame]))
       (define hpane (new horizontal-pane% [parent vpane]))
@@ -109,7 +109,7 @@
         (draw-pict track-info dc 0 0)))
 
     (define/public (on-prev-button)
-      ;; XXX: need to actual step back into the history
+      ;; XXX: just reset the current track for now
       (define prev-state (current-state))
       (set-state! 'null)
       (set-state! prev-state))
@@ -138,7 +138,7 @@
       [(or #".ogg" #".mp3" #".m4a") #t]
       [_ #f]))
   (define tracks
-    (shuffle
+    (values
       (for*/list ([base-dir (in-vector (current-command-line-arguments))]
                   [filename (in-directory base-dir)]
                   #:when (audio-file-name? filename))

@@ -1,3 +1,3 @@
-mshell
-======
+mushell
+=======
 README text here.
