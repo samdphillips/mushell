@@ -3,8 +3,11 @@
 (require racket/class
          racket/gui
          net/url
+         pict
          "private/player.rkt"
-         "private/songlist.rkt")
+         "private/songlist.rkt"
+         "private/tag-tracker.rkt"
+         "private/track-info.rkt")
 
 (define simple-player-ui%
   (class object%
@@ -13,7 +16,9 @@
            [prev-button #f]
            [play-pause-button #f]
            [next-button #f]
-           [track-label #f]
+           [track-info-canvas #f]
+           [track-info  #f]
+           [tag-tracker (new tag-tracker%)]
            [songlist #f]
            [player #f])
 
@@ -21,13 +26,13 @@
       (set! frame
         (new frame%
              [label "mshell"]
-             [min-width 400]))
+             [min-width 600]))
       (define vpane (new vertical-pane% [parent frame]))
       (define hpane (new horizontal-pane% [parent vpane]))
       (set! prev-button
         (new button%
-             [label "prev"]
              [parent hpane]
+             [label "prev"]
              [stretchable-width #t]
              [callback (lambda (b e) (on-prev-button))]))
       (set! play-pause-button
@@ -38,16 +43,17 @@
              [callback (lambda (b e) (toggle-play-pause!))]))
       (set! next-button
         (new button%
-             [label "next"]
              [parent hpane]
+             [label "next"]
              [stretchable-width #t]
              [callback (lambda (b e) (on-next-button))]))
-      (set! track-label
-        (new message%
-             [label ""]
-             [auto-resize #t]
-             [stretchable-width #t]
-             [parent vpane])))
+      (set! track-info-canvas
+        (new canvas%
+             [parent vpane]
+             [paint-callback
+               (lambda (canvas dc) (send this paint-track-info-canvas dc))]
+             [min-width 600]
+             [min-height 100])))
 
     (define (build-player!)
       (set! player (make-player))
@@ -79,14 +85,11 @@
       (player-state player))
 
     (define/public (set-current-track! filename)
-      (set-track-label! (~a filename))
+      (send tag-tracker reset!)
       (set-player-track! player (path->url filename)))
 
     (define (set-play-pause-label! s)
       (send play-pause-button set-label s))
-
-    (define (set-track-label! s)
-      (send track-label set-label s))
 
     (define/public (on-player-state-change e)
       (match e
@@ -97,11 +100,13 @@
         [_ (void)]))
 
     (define/public (on-player-tags e)
-      (set-track-label!
-        (apply ~a #:separator "\n"
-               (send songlist get-current)
-               (for/list ([(k v) (in-hash (player-tags-msg-tags e))])
-                 (~a k ": " v)))))
+      (send tag-tracker update! (player-tags-msg-tags e))
+      (set! track-info (render-track-info (send songlist get-current) tag-tracker))
+      (send track-info-canvas refresh))
+
+    (define/public (paint-track-info-canvas dc)
+      (when track-info
+        (draw-pict track-info dc 0 0)))
 
     (define/public (on-prev-button)
       ;; XXX: need to actual step back into the history
@@ -115,6 +120,7 @@
       ;; pipeline
       (set-state! 'null)
       (send songlist next!)
+      (send tag-tracker reset!)
       (set-current-track! (send songlist get-current))
       (set-state! prev-state))
 
