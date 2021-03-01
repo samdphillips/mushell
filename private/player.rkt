@@ -36,7 +36,6 @@
 (struct player-tags-msg player-msg (tags) #:transparent)
 
 (define (gst-message->player-message msg)
-  (displayln (GstMessage-type msg))
   (match (GstMessage-type msg)
     ['GST_MESSAGE_STATE_CHANGED
      ;; XXX: should these state values be converted from GST values?
