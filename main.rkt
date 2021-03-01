@@ -5,6 +5,7 @@
          net/url
          pict
          "private/player.rkt"
+         "private/repl.rkt"
          "private/songlist.rkt"
          "private/tag-tracker.rkt"
          "private/track-info.rkt")
@@ -18,6 +19,7 @@
            [next-button #f]
            [track-info-canvas #f]
            [track-info  #f]
+           [shell #f]
            [tag-tracker (new tag-tracker%)]
            [songlist #f]
            [player #f])
@@ -28,7 +30,10 @@
              [label "mushell"]
              [min-width 600]))
       (define vpane (new vertical-pane% [parent frame]))
-      (define hpane (new horizontal-pane% [parent vpane]))
+      (define hpane
+        (new horizontal-pane%
+             [parent vpane]
+             [stretchable-height #f]))
       (set! prev-button
         (new button%
              [parent hpane]
@@ -53,7 +58,12 @@
              [paint-callback
                (lambda (canvas dc) (send this paint-track-info-canvas dc))]
              [min-width 600]
-             [min-height 100])))
+             [min-height 100]
+             [stretchable-height #f]))
+      (set! shell
+        (new shell%
+             [parent vpane]
+             [min-height 400])))
 
     (define (build-player!)
       (set! player (make-player))
