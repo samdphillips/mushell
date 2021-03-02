@@ -10,6 +10,7 @@
          g_object_set
          gst_init?
          gst_init_check
+         gst_parse_launch
          gst_bus_get_pollfd
          gst_bus_pop
          gst_element_factory_make
