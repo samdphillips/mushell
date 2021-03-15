@@ -6,10 +6,14 @@
          ffi/unsafe/define)
 
 (provide _GObject
+         _GstObject
          _GstElement
+         _GstBus
          g_object_set
+         g_type_name
          gst_init?
          gst_init_check
+         gst_object_unref
          gst_parse_launch
          gst_bus_get_pollfd
          gst_bus_pop
@@ -23,10 +27,12 @@
          gst_message_parse_state_changed
          gst_message_parse_tag
 
+         gst_tag_get_type
          gst_tag_list_unref
          gst_tag_list_n_tags
          gst_tag_list_nth_tag_name
          gst_tag_list_get_string
+         gst_tag_list_get_uint
          gst_tag_list_get_tag_size)
 
 ;; workaround for MacOS with homebrew installed gstreamer
@@ -239,6 +245,15 @@
         ->
         (and res (ptr->string val))))
 
+(define-gst gst_tag_list_get_uint
+  (_fun _GstTagList
+        _string/latin-1
+        [val : (_ptr o _guint)]
+        ->
+        [res : _gboolean]
+        ->
+        (and res val)))
+
 (define-gst gst_tag_list_get_tag_size
   (_fun _GstTagList
         _string/utf-8
@@ -282,6 +297,8 @@
   (ffi-lib "libgobject-2.0"
            #:get-lib-dirs get-lib-dirs))
 
+(define-ffi-definer define-gobject gobject-lib)
+
 (define-cpointer-type _GObject)
 
 ;; g_object_set accepts varargs and can set multiple keys at once, but for
@@ -297,6 +314,14 @@
                    (_cprocedure (list _GObject _string/utf-8 type _pointer) _void))
                  (get-ffi-obj 'g_object_set gobject-lib ftype))))
   (func gobject name val #f))
+
+(define-cpointer-type _GType)
+
+(define-gobject g_type_name
+  (_fun _GType -> _string/latin-1))
+
+(define-gst gst_tag_get_type
+  (_fun _string/utf-8 -> _GType))
 
 (module* non-interactive-player-test #f
   (gst_init_check)
