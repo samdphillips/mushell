@@ -106,16 +106,35 @@
 ;; look like? How to handle that?
 
 (define (scan-roots roots filter? each-f)
-  (define scn (make-scanner))
+  (define the-scanners (for/list ([i 4]) (make-scanner)))
+  (define work-ch (make-channel))
+  (define (run-scanner a-scanner stop-ch)
+    (define (run)
+      (sync
+        (handle-evt work-ch
+                    (lambda (fname)
+                      (each-f (make-track fname (scan-file a-scanner fname)))
+                      (run)))
+        (wrap-evt stop-ch void)))
+    run)
+  (define thread-stop-chs
+    (for/list ([a-scanner (in-list the-scanners)])
+      (define stop-ch (make-channel))
+      (thread (run-scanner a-scanner stop-ch))
+      stop-ch))
   (define fname-urls
     (~>> (map in-directory roots)
          (apply sequence-append)
          (sequence-filter audio-file?)
          (sequence-map path->url)
          (sequence-filter filter?)))
-  (for ([loc fname-urls])
-    (each-f (make-track loc (scan-file scn loc))))
-  (scanner-close! scn))
+  (for ([fname fname-urls])
+    (log-track-scanner-debug "dispatching to scanner: ~s" fname)
+    (channel-put work-ch fname))
+  (for ([ch (in-list thread-stop-chs)])
+    (channel-put ch #t))
+  (for ([a-scanner (in-list the-scanners)])
+    (scanner-close! a-scanner)))
 
 (module* scan #f
   (time
