@@ -47,44 +47,34 @@
   msgs)
 
 (define (scanner-bus-collect-messages bus)
-  (define tag-ch (make-channel))
-  (define err-ch (make-channel))
-  (define eos-ch (make-channel))
-  (define bus-thd
-    (thread
-      (lambda ()
-        (let run ()
-          (sync (unsafe-fd->evt (gst_bus_get_pollfd bus) 'read))
-          (define msg (gst_bus_pop bus))
-          (match (GstMessage-type msg)
-            ['GST_MESSAGE_EOS
-             (gst_message_unref msg)
-             (channel-put eos-ch #t)]
-            ['GST_MESSAGE_TAG
-             (channel-put tag-ch msg)
-             (run)]
-            ['GST_MESSAGE_ERROR
-             ;; XXX: extract out the error message
-             (gst_message_unref msg)
-             (channel-put err-ch #t)]
-            [v
-             (log-track-scanner-debug "skipping gst bus message type: ~a" v)
-             (gst_message_unref msg)
-             (run)])))))
+  (define bus-msg-evt
+    (wrap-evt
+      (guard-evt
+        (lambda ()
+          (unsafe-fd->evt (gst_bus_get_pollfd bus) 'read)))
+      (lambda (ignore)
+        (gst_bus_pop bus))))
   (define (collect tags)
-    (sync (handle-evt tag-ch
-            (lambda (msg)
-              (define new-tags
-                (extract-tags (gst_message_parse_tag msg)))
-              (gst_message_unref msg)
-              (collect
-                (hash-union tags new-tags
-                            #:combine (lambda (a b) b)))))
-          (handle-evt err-ch
-            (lambda (v)
-              (log-track-scanner-error "an error occurred reading tags")
-              tags))
-          (handle-evt eos-ch (lambda (v) tags))))
+    (define msg (sync bus-msg-evt))
+    (match (GstMessage-type msg)
+      ['GST_MESSAGE_EOS
+       (gst_message_unref msg)
+       tags]
+      ['GST_MESSAGE_TAG
+       (define new-tags
+         (extract-tags (gst_message_parse_tag msg)))
+       (gst_message_unref msg)
+       (collect
+         (hash-union tags new-tags #:combine (lambda (a b) b)))]
+      ['GST_MESSAGE_ERROR
+       ;; XXX: extract out the error message
+       (gst_message_unref msg)
+       (log-track-scanner-error "an error occurred reading tags")
+       tags]
+      [type
+       (log-track-scanner-debug "skipping gst bus message type: ~a" type)
+       (gst_message_unref msg)
+       (collect tags)]))
   (collect (hash)))
 
 (define (get-tag-ref name)
@@ -126,6 +116,13 @@
   (for ([loc fname-urls])
     (each-f (make-track loc (scan-file scn loc))))
   (scanner-close! scn))
+
+(module* scan #f
+  (time
+    (scan-roots (list "/mnt/music/reorganized/Various Artists")
+                (lambda (u) #t)
+                (lambda (t)
+                  (log-track-scanner-info "seen ~s" t)))))
 
 #;
 (module* exp #f
